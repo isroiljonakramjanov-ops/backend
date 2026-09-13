@@ -100,6 +100,29 @@ async function startServer() {
     await addColumnIfNotExists('users', 'telegram_chat_id', 'VARCHAR(255)');
     console.log('✅ Yangi ustunlar tekshirildi va qo\'shildi');
 
+    // Standart admin yaratish (agar yo'q bo'lsa)
+    const { User } = require('./models');
+    const bcrypt = require('bcryptjs');
+    const adminCount = await User.count({ where: { role: 'admin' } });
+    if (adminCount === 0) {
+      const password = await bcrypt.hash('5511', 10);
+      await User.create({
+        full_name: 'Administrator',
+        phone: '+998938215511',
+        department: 'IT',
+        position: 'Tizim Administratori',
+        card_id: 'ADMIN001',
+        hourly_rate: 35000,
+        penalty_per_minute: 0,
+        overtime_coefficient: 1.5,
+        role: 'admin',
+        password,
+        is_active: true,
+      });
+      console.log('👑 Standart Admin yaratildi (+998938215511 / 5511)');
+    }
+
+
     // Cron jobs
     setupCronJobs();
 
