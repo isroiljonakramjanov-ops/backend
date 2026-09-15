@@ -35,6 +35,9 @@ class TelegramService {
       + `📅 <b>Sana:</b> ${dateStr}\n\n`
       + `📊 <b>Shu oydagi jami dijurliklaringiz:</b> ${monthlyCount} ta`;
 
+    if (user.avatar_url) {
+      return this.sendPhotoMessage(user.telegram_chat_id, user.avatar_url, message);
+    }
     return this.sendMessage(user.telegram_chat_id, message);
   }
 
@@ -52,6 +55,9 @@ class TelegramService {
       + `📅 <b>Sana:</b> ${dateStr}\n\n`
       + `📊 <b>Shu oydagi jami dijurliklaringiz:</b> ${monthlyCount} ta`;
 
+    if (user.avatar_url) {
+      return this.sendPhotoMessage(user.telegram_chat_id, user.avatar_url, message);
+    }
     return this.sendMessage(user.telegram_chat_id, message);
   }
 
@@ -130,20 +136,28 @@ class TelegramService {
         let photoData = photoUrl;
         
         if (photoUrl && photoUrl.startsWith('/uploads/')) {
-          const absolutePath = path.join(__dirname, '../../public', photoUrl);
-          if (fs.existsSync(absolutePath)) {
-            photoData = absolutePath;
+          const uploadsPath = path.join(__dirname, '../../uploads', photoUrl.replace('/uploads/', ''));
+          if (fs.existsSync(uploadsPath)) {
+            photoData = uploadsPath;
+          } else {
+            const rootPath = path.join(process.cwd(), photoUrl);
+            if (fs.existsSync(rootPath)) {
+              photoData = rootPath;
+            }
           }
         }
         
-        if (photoData) {
-          await this.bot.sendPhoto(chatId, photoData, { caption, parse_mode: 'Markdown' });
+        if (photoData && (fs.existsSync(photoData) || photoData.startsWith('http'))) {
+          await this.bot.sendPhoto(chatId, photoData, { caption, parse_mode: 'HTML' });
         } else {
-          await this.bot.sendMessage(chatId, caption, { parse_mode: 'Markdown' });
+          await this.bot.sendMessage(chatId, caption, { parse_mode: 'HTML' });
         }
         return { success: true };
       } catch (err) {
         console.error('[TELEGRAM PHOTO ERROR]:', err.message);
+        try {
+          await this.bot.sendMessage(chatId, caption, { parse_mode: 'HTML' });
+        } catch (e) {}
         return { success: false, error: err.message };
       }
     }
