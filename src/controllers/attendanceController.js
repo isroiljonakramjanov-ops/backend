@@ -68,8 +68,18 @@ const attendanceController = {
 
         eventType = 'CHECK_IN';
 
-        // Telegram xabar yuborish
-        telegramService.sendCheckInNotification(user, eventTime, lateMinutes, shift);
+        // Shu oydagi jami dijurliklar sonini hisoblash
+        const monthStart = new Date(eventTime.getFullYear(), eventTime.getMonth(), 1);
+        const monthEnd = new Date(eventTime.getFullYear(), eventTime.getMonth() + 1, 0, 23, 59, 59);
+        const monthlyCount = await Attendance.count({
+          where: {
+            user_id: user.id,
+            check_in: { [Op.gte]: monthStart, [Op.lte]: monthEnd }
+          }
+        });
+
+        // Telegram xabar yuborish (avtomatik push)
+        telegramService.sendCheckInNotification(user, eventTime, monthlyCount);
       } else {
         // CHECK-OUT (yoki qayta ketishni urish)
         const workedHours = PayrollService.calculateWorkedHours(
@@ -97,13 +107,18 @@ const attendanceController = {
           await shift.update({ status: 'completed' });
         }
 
-        // Telegram xabar yuborish
-        telegramService.sendCheckOutNotification(
-          user,
-          eventTime,
-          salaryData.worked_hours,
-          salaryData.daily_salary
-        );
+        // Shu oydagi jami dijurliklar sonini hisoblash
+        const monthStart = new Date(eventTime.getFullYear(), eventTime.getMonth(), 1);
+        const monthEnd = new Date(eventTime.getFullYear(), eventTime.getMonth() + 1, 0, 23, 59, 59);
+        const monthlyCount = await Attendance.count({
+          where: {
+            user_id: user.id,
+            check_in: { [Op.gte]: monthStart, [Op.lte]: monthEnd }
+          }
+        });
+
+        // Telegram xabar yuborish (avtomatik push)
+        telegramService.sendCheckOutNotification(user, eventTime, monthlyCount);
       }
 
       // Socket.IO orqali live monitor yangilash

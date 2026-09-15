@@ -9,46 +9,50 @@ const fs = require('fs');
 class TelegramService {
   constructor() {
     this.enabled = false;
-    // Real bot tokenini .env dan olish
-    // if (process.env.TELEGRAM_BOT_TOKEN) {
-    //   const TelegramBot = require('node-telegram-bot-api');
-    //   this.bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
-    //   this.enabled = true;
-    // }
+    const token = process.env.TELEGRAM_BOT_TOKEN || '8982817506:AAGEepl6prLKJxA7gDRLlG3RxuCotm6TrbQ';
+    if (token) {
+      try {
+        const TelegramBot = require('node-telegram-bot-api');
+        this.bot = new TelegramBot(token, { polling: false });
+        this.enabled = true;
+      } catch (err) {
+        console.warn('Telegram bot init error:', err.message);
+      }
+    }
   }
 
   /**
    * Hodimga CHECK-IN xabari yuborish
    */
-  async sendCheckInNotification(user, checkInTime, lateMinutes, shift) {
+  async sendCheckInNotification(user, checkInTime, monthlyCount = 1) {
+    if (!user || !user.telegram_chat_id) return;
     const time = this.formatTime(checkInTime);
-    const shiftInfo = shift ? `${shift.start_time} — ${shift.end_time}` : 'Belgilanmagan';
-    const lateText = lateMinutes > 0
-      ? `⚠️ ${lateMinutes} daqiqa kechikish`
-      : '✅ 0 daqiqa (Barakalla!)';
+    const dateStr = new Date(checkInTime).toLocaleDateString('uz-UZ');
 
-    const message = `🟢 *CHECK-IN (Kirish qayd etildi)*\n`
-      + `🕒 Vaqt: *${time}*\n`
-      + `⏱ Kechikish: *${lateText}*\n`
-      + `📌 Bugungi dijurligingiz: *${shiftInfo}*`;
+    const message = `🟢 <b>KELISH QAYD ETILDI</b>\n\n`
+      + `👤 <b>Hodim:</b> ${user.full_name}\n`
+      + `📥 <b>Kelish vaqti:</b> ${time}\n`
+      + `📅 <b>Sana:</b> ${dateStr}\n\n`
+      + `📊 <b>Shu oydagi jami dijurliklaringiz:</b> ${monthlyCount} ta`;
 
-    return this.sendPhotoMessage(user.telegram_chat_id, user.avatar_url, message);
+    return this.sendMessage(user.telegram_chat_id, message);
   }
 
   /**
    * Hodimga CHECK-OUT xabari yuborish
    */
-  async sendCheckOutNotification(user, checkOutTime, workedHours, dailySalary) {
+  async sendCheckOutNotification(user, checkOutTime, monthlyCount = 1) {
+    if (!user || !user.telegram_chat_id) return;
     const time = this.formatTime(checkOutTime);
-    const hours = Math.floor(workedHours);
-    const minutes = Math.round((workedHours - hours) * 60);
+    const dateStr = new Date(checkOutTime).toLocaleDateString('uz-UZ');
 
-    const message = `🔴 *CHECK-OUT (Chiqish qayd etildi)*\n`
-      + `🕒 Vaqt: *${time}*\n`
-      + `⏱ Bugungi ish vaqti: *${hours} soat ${minutes} daqiqa*\n`
-      + `💰 Bugun hisoblangan kunlik maosh: *${this.formatMoney(dailySalary)} so'm*`;
+    const message = `🔴 <b>CHIQUV QAYD ETILDI</b>\n\n`
+      + `👤 <b>Hodim:</b> ${user.full_name}\n`
+      + `📤 <b>Chiqish vaqti:</b> ${time}\n`
+      + `📅 <b>Sana:</b> ${dateStr}\n\n`
+      + `📊 <b>Shu oydagi jami dijurliklaringiz:</b> ${monthlyCount} ta`;
 
-    return this.sendPhotoMessage(user.telegram_chat_id, user.avatar_url, message);
+    return this.sendMessage(user.telegram_chat_id, message);
   }
 
   /**
